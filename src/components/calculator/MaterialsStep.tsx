@@ -1,15 +1,19 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { MaterialCosts } from "@/types/calculator";
-import { Layers, Film, Square } from "lucide-react";
+import { MaterialCosts, BagType, BAG_TYPE_CONFIG } from "@/types/calculator";
+import { Layers, Film, Square, Info } from "lucide-react";
 
 interface MaterialsStepProps {
   materials: MaterialCosts;
+  bagType: BagType;
   onChange: (materials: MaterialCosts) => void;
 }
 
-export function MaterialsStep({ materials, onChange }: MaterialsStepProps) {
+export function MaterialsStep({ materials, bagType, onChange }: MaterialsStepProps) {
+  const config = BAG_TYPE_CONFIG[bagType];
+  const isWoven = config.isWoven;
+
   const handleChange = (field: keyof MaterialCosts, value: string | boolean) => {
     if (typeof value === 'boolean') {
       onChange({ ...materials, [field]: value });
@@ -25,47 +29,62 @@ export function MaterialsStep({ materials, onChange }: MaterialsStepProps) {
           Material Costs
         </h2>
         <p className="text-muted-foreground mt-1">
-          Enter material rates and specifications
+          Enter material rates for {config.name}
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* Woven Fabric */}
-        <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Layers className="h-5 w-5 text-primary" />
+        {/* Fabric Section - Only for Woven Bags */}
+        {isWoven ? (
+          <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Layers className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Woven Fabric</h3>
+                <p className="text-xs text-muted-foreground">Base material for the bag</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Woven Fabric</h3>
-              <p className="text-xs text-muted-foreground">Base material for the bag</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Rate (₹/kg)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={materials.fabricRate || ''}
+                  onChange={(e) => handleChange('fabricRate', e.target.value)}
+                  placeholder="e.g., 95.50"
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">GSM</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  value={materials.fabricGSM || ''}
+                  onChange={(e) => handleChange('fabricGSM', e.target.value)}
+                  placeholder="e.g., 70"
+                  className="h-11"
+                />
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Rate (₹/kg)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={materials.fabricRate || ''}
-                onChange={(e) => handleChange('fabricRate', e.target.value)}
-                placeholder="e.g., 95.50"
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm">GSM</Label>
-              <Input
-                type="number"
-                step="1"
-                value={materials.fabricGSM || ''}
-                onChange={(e) => handleChange('fabricGSM', e.target.value)}
-                placeholder="e.g., 70"
-                className="h-11"
-              />
+        ) : (
+          <div className="bg-secondary/50 rounded-xl border border-border p-5">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Poly Bag Selected</h3>
+                <p className="text-sm text-muted-foreground">
+                  For {config.name}, base material costs are calculated from granule prices 
+                  in the previous step. Configure lamination and liner options below if needed.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Lamination */}
         <div className="bg-card rounded-xl border border-border p-5 space-y-4">
@@ -75,7 +94,9 @@ export function MaterialsStep({ materials, onChange }: MaterialsStepProps) {
                 <Film className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">LD Lamination</h3>
+                <h3 className="font-semibold text-foreground">
+                  {isWoven ? 'LD Lamination' : 'Metallic/BOPP Lamination'}
+                </h3>
                 <p className="text-xs text-muted-foreground">Protective layer coating</p>
               </div>
             </div>
@@ -121,7 +142,7 @@ export function MaterialsStep({ materials, onChange }: MaterialsStepProps) {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground">Inner Liner</h3>
-                <p className="text-xs text-muted-foreground">Additional inner protection</p>
+                <p className="text-xs text-muted-foreground">Additional inner protection (LDPE/PP)</p>
               </div>
             </div>
             <Switch

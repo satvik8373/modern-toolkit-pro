@@ -1,5 +1,5 @@
-import { CalculationResult } from "@/types/calculator";
-import { IndianRupee, Package, Layers, Zap, Users, Download, RotateCcw } from "lucide-react";
+import { CalculationResult, BAG_TYPE_CONFIG } from "@/types/calculator";
+import { IndianRupee, Package, Layers, Zap, Users, Download, RotateCcw, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ResultStepProps {
@@ -9,6 +9,8 @@ interface ResultStepProps {
 }
 
 export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
+  const config = BAG_TYPE_CONFIG[result.bagType];
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -62,9 +64,15 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
         <div className="text-5xl font-display font-bold text-primary-foreground mb-2">
           {formatCurrency(result.costPerBag)}
         </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-primary-foreground/60">
-          <Package className="h-4 w-4" />
-          <span>Quantity: {result.quantity.toLocaleString('en-IN')} bags</span>
+        <div className="flex items-center justify-center gap-4 text-sm text-primary-foreground/60">
+          <span className="flex items-center gap-1">
+            <Package className="h-4 w-4" />
+            {result.quantity.toLocaleString('en-IN')} bags
+          </span>
+          <span className="flex items-center gap-1">
+            <Scale className="h-4 w-4" />
+            {result.bagWeight.toFixed(2)}g/bag
+          </span>
         </div>
       </div>
 
@@ -104,7 +112,7 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Type:</span>
-            <span className="font-medium text-foreground">{result.bagType.toUpperCase()} Woven</span>
+            <span className="font-medium text-foreground">{config.name}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Dimensions:</span>
@@ -112,11 +120,21 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
               {result.dimensions.length} × {result.dimensions.width} cm
             </span>
           </div>
+          {!config.isWoven && result.dimensions.thickness > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Thickness:</span>
+              <span className="font-medium text-foreground">{result.dimensions.thickness} µm</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Gusset:</span>
             <span className="font-medium text-foreground capitalize">
               {result.dimensions.gussetType === 'none' ? 'None' : `${result.dimensions.gussetType} (${result.dimensions.gusset}cm)`}
             </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bag Weight:</span>
+            <span className="font-medium text-foreground">{result.bagWeight.toFixed(2)} g</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Quantity:</span>

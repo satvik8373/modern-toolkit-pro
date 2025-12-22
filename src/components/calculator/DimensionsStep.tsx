@@ -37,34 +37,94 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Visual Representation */}
-        <div className="bg-secondary/50 rounded-xl p-6 flex items-center justify-center">
-          <div className="relative">
+        <div className="bg-secondary/50 rounded-xl p-6 flex items-center justify-center min-h-[320px]">
+          <div className="relative flex items-center justify-center">
+            {/* Animated Bag Container */}
             <div
-              className="border-2 border-dashed border-accent rounded-lg flex items-center justify-center"
+              className="border-2 border-dashed border-accent rounded-lg flex items-center justify-center bg-gradient-to-br from-accent/5 to-accent/10 shadow-lg transition-all duration-500 ease-out"
               style={{
-                width: Math.min(Math.max(dimensions.width * 2, 80), 200),
-                height: Math.min(Math.max(dimensions.length * 2, 120), 280),
+                width: Math.min(Math.max(dimensions.width * 3, 80), 220),
+                height: Math.min(Math.max(dimensions.length * 3, 100), 280),
+                transform: `scale(${dimensions.length > 0 && dimensions.width > 0 ? 1 : 0.9})`,
+                opacity: dimensions.length > 0 && dimensions.width > 0 ? 1 : 0.6,
               }}
             >
-              <div className="text-center">
-                <Ruler className="h-8 w-8 text-accent mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">
-                  {dimensions.length} × {dimensions.width} cm
+              {/* Inner bag design */}
+              <div 
+                className="absolute inset-2 border border-accent/30 rounded transition-all duration-500"
+                style={{
+                  opacity: dimensions.length > 10 ? 1 : 0,
+                }}
+              />
+              
+              {/* Gusset visualization */}
+              {dimensions.gussetType === 'twist' && (
+                <div className="absolute inset-y-4 left-1 w-1.5 bg-accent/20 rounded-full transition-all duration-300" 
+                  style={{ 
+                    height: `calc(100% - 32px)`,
+                    transform: `scaleX(${dimensions.gusset ? Math.min(dimensions.gusset / 10, 1.5) : 0.5})`
+                  }} 
+                />
+              )}
+              {dimensions.gussetType === 'twist' && (
+                <div className="absolute inset-y-4 right-1 w-1.5 bg-accent/20 rounded-full transition-all duration-300"
+                  style={{ 
+                    height: `calc(100% - 32px)`,
+                    transform: `scaleX(${dimensions.gusset ? Math.min(dimensions.gusset / 10, 1.5) : 0.5})`
+                  }} 
+                />
+              )}
+              {dimensions.gussetType === 'straight' && (
+                <div className="absolute inset-x-4 bottom-1 h-1.5 bg-accent/20 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `calc(100% - 32px)`,
+                    transform: `scaleY(${dimensions.gusset ? Math.min(dimensions.gusset / 10, 1.5) : 0.5})`
+                  }} 
+                />
+              )}
+              
+              <div className="text-center z-10">
+                <Ruler className="h-8 w-8 text-accent mx-auto mb-2 transition-transform duration-300 hover:rotate-12" />
+                <p className="text-sm font-semibold text-accent transition-all duration-300">
+                  {dimensions.length || 0} × {dimensions.width || 0} cm
                 </p>
+                {dimensions.gussetType !== 'none' && dimensions.gusset > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1 animate-fade-in">
+                    Gusset: {dimensions.gusset} cm
+                  </p>
+                )}
               </div>
             </div>
-            {/* Length indicator */}
-            <div className="absolute -right-8 top-0 bottom-0 flex items-center">
+            
+            {/* Length indicator with animated line */}
+            <div className="absolute -right-10 top-0 bottom-0 flex items-center">
+              <div className="flex flex-col items-center h-full">
+                <div 
+                  className="w-0.5 bg-gradient-to-b from-accent via-accent to-accent/50 transition-all duration-500 rounded-full"
+                  style={{
+                    height: Math.min(Math.max(dimensions.length * 3, 100), 280),
+                  }}
+                />
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-xs text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-full">
+                    {dimensions.length || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Width indicator with animated line */}
+            <div className="absolute -bottom-10 left-0 right-0 flex justify-center">
               <div className="flex flex-col items-center">
-                <div className="h-full w-0.5 bg-accent" />
-                <span className="text-[10px] text-accent font-medium mt-1">L</span>
-              </div>
-            </div>
-            {/* Width indicator */}
-            <div className="absolute -bottom-8 left-0 right-0 flex justify-center">
-              <div className="flex items-center gap-1">
-                <div className="w-full h-0.5 bg-accent" />
-                <span className="text-[10px] text-accent font-medium">W</span>
+                <div 
+                  className="h-0.5 bg-gradient-to-r from-accent/50 via-accent to-accent/50 transition-all duration-500 rounded-full"
+                  style={{
+                    width: Math.min(Math.max(dimensions.width * 3, 80), 220),
+                  }}
+                />
+                <span className="text-xs text-accent font-bold bg-accent/10 px-2 py-0.5 rounded-full mt-2">
+                  {dimensions.width || 0}
+                </span>
               </div>
             </div>
           </div>

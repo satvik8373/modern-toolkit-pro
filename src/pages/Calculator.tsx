@@ -3,23 +3,25 @@ import { Layout } from "@/components/layout/Layout";
 import { StepIndicator } from "@/components/calculator/StepIndicator";
 import { BagTypeStep } from "@/components/calculator/BagTypeStep";
 import { DimensionsStep } from "@/components/calculator/DimensionsStep";
+import { GranulesStep } from "@/components/calculator/GranulesStep";
 import { MaterialsStep } from "@/components/calculator/MaterialsStep";
 import { MachineStep } from "@/components/calculator/MachineStep";
 import { LaborStep } from "@/components/calculator/LaborStep";
 import { ResultStep } from "@/components/calculator/ResultStep";
 import { Button } from "@/components/ui/button";
 import { useCalculator } from "@/hooks/useCalculator";
-import { CalculationResult } from "@/types/calculator";
+import { CalculationResult, BAG_TYPE_CONFIG } from "@/types/calculator";
 import { ArrowLeft, ArrowRight, Calculator } from "lucide-react";
 import { toast } from "sonner";
 
 const steps = [
   { id: 1, title: "Bag Type", description: "Material selection" },
-  { id: 2, title: "Dimensions", description: "Size & gusset" },
-  { id: 3, title: "Materials", description: "Costs & GSM" },
-  { id: 4, title: "Machines", description: "Processing" },
-  { id: 5, title: "Labor", description: "Workforce costs" },
-  { id: 6, title: "Results", description: "Final costing" },
+  { id: 2, title: "Dimensions", description: "Size & thickness" },
+  { id: 3, title: "Granules", description: "Raw material" },
+  { id: 4, title: "Materials", description: "Costs & GSM" },
+  { id: 5, title: "Machines", description: "Processing" },
+  { id: 6, title: "Labor", description: "Workforce costs" },
+  { id: 7, title: "Results", description: "Final costing" },
 ];
 
 export default function CalculatorPage() {
@@ -31,6 +33,7 @@ export default function CalculatorPage() {
     setMaterials,
     setMachines,
     setLabor,
+    setGranules,
     setQuantity,
     calculateCost,
     saveResult,
@@ -38,12 +41,13 @@ export default function CalculatorPage() {
   } = useCalculator();
 
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const config = BAG_TYPE_CONFIG[state.bagType];
 
   const handleNext = () => {
-    if (state.step === 5) {
+    if (state.step === 6) {
       const calculatedResult = calculateCost();
       setResult(calculatedResult);
-      setStep(6);
+      setStep(7);
     } else {
       setStep(state.step + 1);
     }
@@ -70,12 +74,25 @@ export default function CalculatorPage() {
   const canProceed = () => {
     switch (state.step) {
       case 2:
-        return state.dimensions.length > 0 && state.dimensions.width > 0;
+        if (config.isWoven) {
+          return state.dimensions.length > 0 && state.dimensions.width > 0;
+        }
+        return state.dimensions.length > 0 && state.dimensions.width > 0 && state.dimensions.thickness > 0;
       case 3:
-        return state.materials.fabricRate > 0 && state.materials.fabricGSM > 0;
+        // Granules step - required for poly bags
+        if (!config.isWoven) {
+          return state.granules.granuleRate > 0;
+        }
+        return true;
       case 4:
-        return state.machines.electricityRate > 0;
+        // Materials step - fabric required for woven, optional for poly
+        if (config.isWoven) {
+          return state.materials.fabricRate > 0 && state.materials.fabricGSM > 0;
+        }
+        return true;
       case 5:
+        return state.machines.electricityRate > 0;
+      case 6:
         return state.quantity > 0;
       default:
         return true;
@@ -95,7 +112,7 @@ export default function CalculatorPage() {
             Calculate Your <span className="text-gradient">Bag Costs</span>
           </h1>
           <p className="text-muted-foreground">
-            Precision costing in under 1 minute
+            Precision costing for {config.name}
           </p>
         </div>
 
@@ -110,15 +127,34 @@ export default function CalculatorPage() {
             <BagTypeStep bagType={state.bagType} onChange={setBagType} />
           )}
           {state.step === 2 && (
-            <DimensionsStep dimensions={state.dimensions} onChange={setDimensions} />
+            <DimensionsStep 
+              dimensions={state.dimensions} 
+              bagType={state.bagType}
+              onChange={setDimensions} 
+            />
           )}
           {state.step === 3 && (
-            <MaterialsStep materials={state.materials} onChange={setMaterials} />
+            <GranulesStep 
+              granules={state.granules} 
+              bagType={state.bagType}
+              onChange={setGranules} 
+            />
           )}
           {state.step === 4 && (
-            <MachineStep machines={state.machines} onChange={setMachines} />
+            <MaterialsStep 
+              materials={state.materials} 
+              bagType={state.bagType}
+              onChange={setMaterials} 
+            />
           )}
           {state.step === 5 && (
+            <MachineStep 
+              machines={state.machines} 
+              bagType={state.bagType}
+              onChange={setMachines} 
+            />
+          )}
+          {state.step === 6 && (
             <LaborStep
               labor={state.labor}
               onChange={setLabor}
@@ -126,13 +162,13 @@ export default function CalculatorPage() {
               onQuantityChange={setQuantity}
             />
           )}
-          {state.step === 6 && result && (
+          {state.step === 7 && result && (
             <ResultStep result={result} onReset={handleReset} onSave={handleSave} />
           )}
         </div>
 
         {/* Navigation */}
-        {state.step < 6 && (
+        {state.step < 7 && (
           <div className="flex justify-between gap-4">
             <Button
               variant="outline"
@@ -151,7 +187,7 @@ export default function CalculatorPage() {
               disabled={!canProceed()}
               className="gap-2"
             >
-              {state.step === 5 ? "Calculate Cost" : "Next Step"}
+              {state.step === 6 ? "Calculate Cost" : "Next Step"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>

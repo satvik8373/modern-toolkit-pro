@@ -1,11 +1,12 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { BagDimensions } from "@/types/calculator";
-import { Ruler, Move3D } from "lucide-react";
+import { BagDimensions, BagType, BAG_TYPE_CONFIG } from "@/types/calculator";
+import { Ruler, Move3D, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DimensionsStepProps {
   dimensions: BagDimensions;
+  bagType: BagType;
   onChange: (dimensions: BagDimensions) => void;
 }
 
@@ -15,7 +16,10 @@ const gussetTypes = [
   { id: 'straight' as const, label: 'Straight Gusset', description: 'Bottom fold' },
 ];
 
-export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
+export function DimensionsStep({ dimensions, bagType, onChange }: DimensionsStepProps) {
+  const config = BAG_TYPE_CONFIG[bagType];
+  const isWoven = config.isWoven;
+
   const handleChange = (field: keyof BagDimensions, value: string | 'none' | 'twist' | 'straight') => {
     if (field === 'gussetType') {
       onChange({ ...dimensions, gussetType: value as 'none' | 'twist' | 'straight' });
@@ -31,7 +35,7 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
           Bag Dimensions
         </h2>
         <p className="text-muted-foreground mt-1">
-          Enter the exact measurements in centimeters
+          Enter the exact measurements for {config.name}
         </p>
       </div>
 
@@ -51,6 +55,11 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
                 <p className="text-xs text-muted-foreground">
                   {dimensions.length} × {dimensions.width} cm
                 </p>
+                {!isWoven && dimensions.thickness > 0 && (
+                  <p className="text-xs text-accent mt-1">
+                    {dimensions.thickness} µm
+                  </p>
+                )}
               </div>
             </div>
             {/* Length indicator */}
@@ -102,6 +111,28 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
               />
             </div>
           </div>
+
+          {/* Thickness for Poly Bags */}
+          {!isWoven && (
+            <div className="space-y-2 animate-slide-up">
+              <Label htmlFor="thickness" className="text-sm font-medium flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                Film Thickness (microns)
+              </Label>
+              <Input
+                id="thickness"
+                type="number"
+                step="1"
+                value={dimensions.thickness || ''}
+                onChange={(e) => handleChange('thickness', e.target.value)}
+                placeholder="e.g., 50"
+                className="h-12"
+              />
+              <p className="text-xs text-muted-foreground">
+                Common: LDPE 30-100µm, HDPE 10-40µm, BOPP 15-40µm
+              </p>
+            </div>
+          )}
 
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { Package, Calculator, History, Settings, Menu, X } from "lucide-react";
+import { Package, Calculator, History, Settings, Menu, X, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Calculator, label: "Calculator", path: "/calculator" },
+  { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: History, label: "History", path: "/history" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

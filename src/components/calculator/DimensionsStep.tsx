@@ -24,6 +24,10 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
     }
   };
 
+  // Calculate visual dimensions with smooth scaling
+  const visualWidth = Math.min(Math.max(dimensions.width * 2.5, 80), 180);
+  const visualHeight = Math.min(Math.max(dimensions.length * 2.5, 100), 240);
+
   return (
     <div className="space-y-6">
       <div>
@@ -36,37 +40,97 @@ export function DimensionsStep({ dimensions, onChange }: DimensionsStepProps) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Visual Representation */}
-        <div className="bg-secondary/50 rounded-xl p-6 flex items-center justify-center">
+        {/* Visual Representation with Animated Dimension Lines */}
+        <div className="bg-secondary/50 rounded-xl p-8 flex items-center justify-center min-h-[320px]">
           <div className="relative">
+            {/* Left Length Indicator Line */}
+            <div className="absolute -left-12 top-0 flex flex-col items-center">
+              {/* Top arrow */}
+              <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[8px] border-b-accent" />
+              {/* Animated line */}
+              <div 
+                className="w-0.5 bg-gradient-to-b from-accent via-accent to-accent transition-all duration-500 ease-out"
+                style={{ height: visualHeight }}
+              />
+              {/* Bottom arrow */}
+              <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[8px] border-t-accent" />
+              {/* Length label */}
+              <div className="absolute top-1/2 -translate-y-1/2 -left-8 -rotate-90">
+                <span className="text-xs font-bold text-accent bg-background/80 px-2 py-0.5 rounded whitespace-nowrap">
+                  {dimensions.length || 0} cm
+                </span>
+              </div>
+            </div>
+
+            {/* The Bag Shape */}
             <div
-              className="border-2 border-dashed border-accent rounded-lg flex items-center justify-center"
+              className="relative border-2 border-accent rounded-lg bg-gradient-to-br from-accent/5 to-accent/15 transition-all duration-500 ease-out flex items-center justify-center overflow-hidden"
               style={{
-                width: Math.min(Math.max(dimensions.width * 2, 80), 200),
-                height: Math.min(Math.max(dimensions.length * 2, 120), 280),
+                width: visualWidth,
+                height: visualHeight,
               }}
             >
-              <div className="text-center">
-                <Ruler className="h-8 w-8 text-accent mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">
-                  {dimensions.length} × {dimensions.width} cm
+              {/* Inner pattern */}
+              <div className="absolute inset-2 border border-dashed border-accent/30 rounded" />
+              
+              {/* Center content */}
+              <div className="text-center z-10">
+                <Ruler className="h-8 w-8 text-accent mx-auto mb-2 opacity-60" />
+                <p className="text-xs text-muted-foreground font-medium">
+                  {dimensions.length || 0} × {dimensions.width || 0}
                 </p>
               </div>
+
+              {/* Gusset visualization */}
+              {dimensions.gussetType === 'twist' && dimensions.gusset > 0 && (
+                <>
+                  <div 
+                    className="absolute left-0 top-0 bottom-0 bg-accent/20 border-r border-dashed border-accent/50 transition-all duration-300"
+                    style={{ width: Math.min(dimensions.gusset * 2, visualWidth / 4) }}
+                  />
+                  <div 
+                    className="absolute right-0 top-0 bottom-0 bg-accent/20 border-l border-dashed border-accent/50 transition-all duration-300"
+                    style={{ width: Math.min(dimensions.gusset * 2, visualWidth / 4) }}
+                  />
+                </>
+              )}
+              {dimensions.gussetType === 'straight' && dimensions.gusset > 0 && (
+                <div 
+                  className="absolute left-0 right-0 bottom-0 bg-accent/20 border-t border-dashed border-accent/50 transition-all duration-300"
+                  style={{ height: Math.min(dimensions.gusset * 2, visualHeight / 4) }}
+                />
+              )}
             </div>
-            {/* Length indicator */}
-            <div className="absolute -right-8 top-0 bottom-0 flex items-center">
-              <div className="flex flex-col items-center">
-                <div className="h-full w-0.5 bg-accent" />
-                <span className="text-[10px] text-accent font-medium mt-1">L</span>
+
+            {/* Bottom Width Indicator Line */}
+            <div className="absolute -bottom-12 left-0 flex items-center" style={{ width: visualWidth }}>
+              {/* Left arrow */}
+              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-r-[8px] border-r-accent" />
+              {/* Animated line */}
+              <div 
+                className="h-0.5 bg-gradient-to-r from-accent via-accent to-accent transition-all duration-500 ease-out flex-1"
+              />
+              {/* Right arrow */}
+              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[8px] border-l-accent" />
+              {/* Width label */}
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-6">
+                <span className="text-xs font-bold text-accent bg-background/80 px-2 py-0.5 rounded whitespace-nowrap">
+                  {dimensions.width || 0} cm
+                </span>
               </div>
             </div>
-            {/* Width indicator */}
-            <div className="absolute -bottom-8 left-0 right-0 flex justify-center">
-              <div className="flex items-center gap-1">
-                <div className="w-full h-0.5 bg-accent" />
-                <span className="text-[10px] text-accent font-medium">W</span>
+
+            {/* Gusset indicator (if applicable) */}
+            {dimensions.gussetType !== 'none' && dimensions.gusset > 0 && (
+              <div className="absolute -right-16 top-1/2 -translate-y-1/2">
+                <div className="flex items-center gap-1">
+                  <div className="h-8 w-0.5 bg-warning transition-all duration-300" />
+                  <span className="text-[10px] font-bold text-warning whitespace-nowrap">
+                    G: {dimensions.gusset}cm
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

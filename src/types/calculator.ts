@@ -8,6 +8,9 @@ export interface BagDimensions {
 export interface MaterialCosts {
   fabricRate: number;
   fabricGSM: number;
+  granuleRequired: boolean;
+  granuleRate: number;
+  granulePercentage: number;
   laminationRequired: boolean;
   laminationRate: number;
   laminationGSM: number;

@@ -11,9 +11,6 @@ const initialDimensions: BagDimensions = {
 const initialMaterials: MaterialCosts = {
   fabricRate: 0,
   fabricGSM: 0,
-  granuleRequired: false,
-  granuleRate: 0,
-  granulePercentage: 0,
   laminationRequired: false,
   laminationRate: 0,
   laminationGSM: 0,
@@ -100,12 +97,6 @@ export function useCalculator() {
     // Material cost calculation
     const fabricWeight = bagArea * materials.fabricGSM / 1000; // kg per bag
     let materialCost = fabricWeight * materials.fabricRate;
-
-    // Plastic granule cost (based on percentage of fabric weight)
-    if (materials.granuleRequired && materials.granulePercentage > 0) {
-      const granuleWeight = fabricWeight * (materials.granulePercentage / 100);
-      materialCost += granuleWeight * materials.granuleRate;
-    }
 
     if (materials.laminationRequired) {
       const laminationWeight = bagArea * materials.laminationGSM / 1000;

@@ -8,6 +8,10 @@ import {
   LaborCosts,
   GranuleCosts,
   BagType,
+  ProductCategory,
+  PaperBagSpecs,
+  PaperType,
+  PAPER_TYPE_CONFIG,
   MATERIAL_DENSITIES,
   BAG_TYPE_CONFIG
 } from '@/types/calculator';
@@ -61,8 +65,35 @@ const initialGranules: GranuleCosts = {
   fillerPercentage: 0,
 };
 
+const initialPaper: PaperBagSpecs = {
+  paperType: 'kraft',
+  gsm: 90,
+  length: 0,
+  width: 0,
+  gussetRequired: false,
+  gusset: 0,
+  gussetRate: 0,
+  paperRate: 0,
+  wastagePercentage: 5,
+  handleRequired: false,
+  handleType: 'none',
+  handleRate: 0,
+  printingRequired: false,
+  printingRate: 0,
+  printColors: 1,
+  laminationRequired: false,
+  laminationRate: 0,
+  glueRate: 0,
+  laborRate: 0,
+  electricityRate: 0,
+  powerLoad: 8,
+  bagsPerHour: 3000,
+};
+
 const initialState: CalculatorState = {
   step: 1,
+  productCategory: 'plastic',
+  paper: initialPaper,
   bagType: 'pp',
   dimensions: initialDimensions,
   materials: initialMaterials,
@@ -123,6 +154,25 @@ export function useCalculator() {
     setState((prev) => ({ ...prev, granules }));
   }, []);
 
+  const setProductCategory = useCallback((productCategory: ProductCategory) => {
+    setState((prev) => ({ ...prev, productCategory }));
+  }, []);
+
+  const setPaper = useCallback((paper: PaperBagSpecs) => {
+    setState((prev) => ({ ...prev, paper }));
+  }, []);
+
+  const setPaperType = useCallback((paperType: PaperType) => {
+    setState((prev) => ({
+      ...prev,
+      paper: { ...prev.paper, paperType, gsm: PAPER_TYPE_CONFIG[paperType].defaultGSM },
+    }));
+  }, []);
+
+  const loadState = useCallback((next: CalculatorState) => {
+    setState({ ...next });
+  }, []);
+
   const setQuantity = useCallback((quantity: number) => {
     setState((prev) => ({ ...prev, quantity }));
   }, []);
@@ -173,7 +223,73 @@ export function useCalculator() {
     }
   }, []);
 
-  const calculateCost = useCallback((): CalculationResult => {
+  /**
+   * Paper bag costing (industry method)
+   * Sheet area (m²) = ((2×W + 2×G + flap) / 100) × ((L + bottom) / 100)
+   * Paper weight (g) = area × GSM ; cost = weight/1000 × rate × (1 + wastage%)
+   */
+  const calculatePaperCost = useCallback((): CalculationResult => {
+    const p = state.paper;
+    const quantity = state.quantity;
+
+    const gusset = p.gussetRequired ? p.gusset : 0;
+    const flapCm = 3;    // side pasting flap
+    const bottomCm = 5;  // bottom fold allowance
+
+    const sheetWidthM = (2 * p.width + 2 * gusset + flapCm) / 100;
+    const sheetLengthM = (p.length + bottomCm) / 100;
+    const areaSqM = sheetWidthM * sheetLengthM;
+
+    const bagWeight = areaSqM * p.gsm; // grams per bag
+    const bagWeightKg = bagWeight / 1000;
+
+    // Raw material (paper) cost including wastage
+    let materialCost = bagWeightKg * p.paperRate * (1 + p.wastagePercentage / 100);
+
+    if (p.handleRequired) materialCost += p.handleRate;
+    if (p.laminationRequired) materialCost += p.laminationRate;
+    if (p.gussetRequired) materialCost += p.gussetRate;
+    materialCost += p.glueRate / 1000;
+
+    // Printing cost (rate per 1000 bags × colors)
+    const printingCost = p.printingRequired
+      ? (p.printingRate * Math.max(p.printColors, 1)) / 1000
+      : 0;
+
+    // Electricity: power load × hours per bag × rate
+    const hoursPerBag = p.bagsPerHour > 0 ? 1 / p.bagsPerHour : 0;
+    const machineCost = p.powerLoad * hoursPerBag * p.electricityRate;
+
+    // Labour per 1000 bags
+    const laborCost = p.laborRate / 1000;
+
+    const costPerBag = materialCost + printingCost + machineCost + laborCost;
+
+    return {
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      productCategory: 'paper',
+      paperType: p.paperType,
+      bagType: 'pp',
+      dimensions: {
+        length: p.length,
+        width: p.width,
+        gusset,
+        gussetType: p.gussetRequired ? 'straight' : 'none',
+        thickness: 0,
+      },
+      materialCost: (materialCost + printingCost) * quantity,
+      machineCost: machineCost * quantity,
+      laborCost: laborCost * quantity,
+      totalCost: costPerBag * quantity,
+      costPerBag,
+      quantity,
+      bagWeight,
+      snapshot: state,
+    };
+  }, [state]);
+
+  const calculatePlasticCost = useCallback((): CalculationResult => {
     const { dimensions, materials, machines, labor, granules, quantity, bagType } = state;
     const config = BAG_TYPE_CONFIG[bagType];
 
@@ -298,11 +414,29 @@ export function useCalculator() {
       quantity,
       bagWeight,
       granuleCost: granuleCost * quantity,
+      productCategory: 'plastic',
+      snapshot: state,
     };
   }, [state, calculateBagWeight]);
 
+  const calculateCost = useCallback((): CalculationResult => {
+    return state.productCategory === 'paper' ? calculatePaperCost() : calculatePlasticCost();
+  }, [state.productCategory, calculatePaperCost, calculatePlasticCost]);
+
   const saveResult = useCallback((result: CalculationResult) => {
     const newHistory = [result, ...history].slice(0, 50);
+    setHistory(newHistory);
+    localStorage.setItem('bagcost-history', JSON.stringify(newHistory));
+  }, [history]);
+
+  const updateResult = useCallback((id: string, updates: Partial<CalculationResult>) => {
+    const newHistory = history.map((h) => (h.id === id ? { ...h, ...updates } : h));
+    setHistory(newHistory);
+    localStorage.setItem('bagcost-history', JSON.stringify(newHistory));
+  }, [history]);
+
+  const deleteResult = useCallback((id: string) => {
+    const newHistory = history.filter((h) => h.id !== id);
     setHistory(newHistory);
     localStorage.setItem('bagcost-history', JSON.stringify(newHistory));
   }, [history]);
@@ -320,6 +454,10 @@ export function useCalculator() {
     state,
     history,
     setStep,
+    setProductCategory,
+    setPaper,
+    setPaperType,
+    loadState,
     setBagType,
     setDimensions,
     setMaterials,
@@ -329,6 +467,8 @@ export function useCalculator() {
     setQuantity,
     calculateCost,
     saveResult,
+    updateResult,
+    deleteResult,
     reset,
     clearHistory,
   };

@@ -1,6 +1,7 @@
-import { CalculationResult, BAG_TYPE_CONFIG } from "@/types/calculator";
-import { IndianRupee, Package, Layers, Zap, Users, Download, RotateCcw, Scale } from "lucide-react";
+import { CalculationResult, BAG_TYPE_CONFIG, PAPER_TYPE_CONFIG } from "@/types/calculator";
+import { IndianRupee, Package, Layers, Zap, Users, Download, RotateCcw, Scale, ReceiptText, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface ResultStepProps {
   result: CalculationResult;
@@ -9,7 +10,13 @@ interface ResultStepProps {
 }
 
 export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
-  const config = BAG_TYPE_CONFIG[result.bagType];
+  const navigate = useNavigate();
+  const isPaper = result.productCategory === 'paper';
+  const plasticConfig = !isPaper && result.bagType ? BAG_TYPE_CONFIG[result.bagType] : null;
+  const paperConfig = isPaper && result.paperType ? PAPER_TYPE_CONFIG[result.paperType] : null;
+  const typeName = isPaper 
+    ? (paperConfig?.name || 'Paper Carry Bag')
+    : (plasticConfig?.name || 'Woven / Poly Bag');
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -22,14 +29,14 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
 
   const costBreakdown = [
     {
-      label: 'Material Cost',
+      label: isPaper ? 'Material & Printing Cost' : 'Material Cost',
       value: result.materialCost,
       icon: Layers,
       color: 'text-info',
       bgColor: 'bg-info/10',
     },
     {
-      label: 'Machine/Electricity Cost',
+      label: isPaper ? 'Machine & Electricity Cost' : 'Machine/Electricity Cost',
       value: result.machineCost,
       icon: Zap,
       color: 'text-warning',
@@ -44,14 +51,24 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
     },
   ];
 
+  const handleCreateInvoice = () => {
+    onSave();
+    // Navigate to billing with state to auto-import this result
+    navigate('/billing', { state: { importResult: result } });
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-semibold uppercase tracking-wider mb-2">
+          {isPaper ? <FileText className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+          {isPaper ? 'Paper Bag Costing' : 'Plastic Bag Costing'}
+        </div>
         <h2 className="text-2xl font-display font-bold text-foreground">
           Cost Calculation Complete
         </h2>
         <p className="text-muted-foreground mt-1">
-          Precision calculated to ₹0.001
+          Precision calculated to ₹0.001 per bag
         </p>
       </div>
 
@@ -99,7 +116,10 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
       {/* Total */}
       <div className="bg-secondary rounded-xl p-4">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-semibold text-foreground">Total Order Cost</span>
+          <div>
+            <span className="text-lg font-semibold text-foreground">Total Order Cost</span>
+            <p className="text-xs text-muted-foreground">For {result.quantity.toLocaleString('en-IN')} bags</p>
+          </div>
           <span className="text-2xl font-display font-bold text-accent">
             {formatCurrency(result.totalCost)}
           </span>
@@ -111,8 +131,12 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
         <h3 className="font-semibold text-foreground mb-3">Bag Specifications</h3>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex justify-between">
+            <span className="text-muted-foreground">Product:</span>
+            <span className="font-medium text-foreground capitalize">{result.productCategory || 'plastic'}</span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-muted-foreground">Type:</span>
-            <span className="font-medium text-foreground">{config.name}</span>
+            <span className="font-medium text-foreground">{typeName}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Dimensions:</span>
@@ -120,7 +144,7 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
               {result.dimensions.length} × {result.dimensions.width} cm
             </span>
           </div>
-          {!config.isWoven && result.dimensions.thickness > 0 && (
+          {!isPaper && plasticConfig && !plasticConfig.isWoven && result.dimensions.thickness > 0 && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Thickness:</span>
               <span className="font-medium text-foreground">{result.dimensions.thickness} µm</span>
@@ -129,7 +153,9 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
           <div className="flex justify-between">
             <span className="text-muted-foreground">Gusset:</span>
             <span className="font-medium text-foreground capitalize">
-              {result.dimensions.gussetType === 'none' ? 'None' : `${result.dimensions.gussetType} (${result.dimensions.gusset}cm)`}
+              {result.dimensions.gussetType === 'none' || !result.dimensions.gusset
+                ? 'None' 
+                : `${result.dimensions.gussetType} (${result.dimensions.gusset}cm)`}
             </span>
           </div>
           <div className="flex justify-between">
@@ -137,29 +163,41 @@ export function ResultStep({ result, onReset, onSave }: ResultStepProps) {
             <span className="font-medium text-foreground">{result.bagWeight.toFixed(2)} g</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Quantity:</span>
+            <span className="text-muted-foreground">Total Weight:</span>
+            <span className="font-medium text-foreground">{((result.bagWeight * result.quantity) / 1000).toFixed(2)} kg</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Order Quantity:</span>
             <span className="font-medium text-foreground">{result.quantity.toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Button
           variant="outline"
-          className="flex-1 h-12"
+          className="h-12"
           onClick={onReset}
         >
           <RotateCcw className="h-4 w-4 mr-2" />
           New Calculation
         </Button>
         <Button
-          variant="accent"
-          className="flex-1 h-12"
+          variant="secondary"
+          className="h-12"
           onClick={onSave}
         >
           <Download className="h-4 w-4 mr-2" />
-          Save & Export
+          Save to History
+        </Button>
+        <Button
+          variant="accent"
+          className="h-12 shadow-glow"
+          onClick={handleCreateInvoice}
+        >
+          <ReceiptText className="h-4 w-4 mr-2" />
+          Create Tax Invoice
         </Button>
       </div>
     </div>

@@ -62,16 +62,24 @@ export interface CalculationResult {
   quantity: number;
   bagWeight: number; // grams per bag
   granuleCost?: number;
+  productCategory?: ProductCategory;
+  paperType?: PaperType;
+  label?: string;
+  notes?: string;
+  /** Full input snapshot so a saved calculation can be re-opened and edited */
+  snapshot?: unknown;
 }
 
 export interface CalculatorState {
   step: number;
+  productCategory: ProductCategory;
   bagType: BagType;
   dimensions: BagDimensions;
   materials: MaterialCosts;
   machines: MachineCosts;
   labor: LaborCosts;
   granules: GranuleCosts;
+  paper: PaperBagSpecs;
   quantity: number;
 }
 

@@ -152,3 +152,170 @@ export const BAG_TYPE_CONFIG: Record<BagType, {
     defaultThickness: 30,
   },
 };
+
+/* ==========================================================
+   PRODUCT CATEGORIES (Phase 1 selection: Plastic or Paper)
+   ========================================================== */
+
+export type ProductCategory = 'plastic' | 'paper';
+
+export type PaperType = 'kraft' | 'virgin-white' | 'duplex' | 'art' | 'recycled';
+
+export interface PaperBagSpecs {
+  paperType: PaperType;
+  gsm: number;                 // paper grammage
+  length: number;              // cm
+  width: number;               // cm
+  gussetRequired: boolean;     // yes / no
+  gusset: number;              // cm (side gusset)
+  gussetRate: number;          // ₹ extra per bag for gusset forming
+  paperRate: number;           // ₹ per kg (raw material rate)
+  wastagePercentage: number;   // % wastage
+  handleRequired: boolean;
+  handleType: 'none' | 'flat-paper' | 'twisted-paper' | 'rope' | 'die-cut';
+  handleRate: number;          // ₹ per bag (pair)
+  printingRequired: boolean;
+  printingRate: number;        // ₹ per 1000 bags
+  printColors: number;
+  laminationRequired: boolean;
+  laminationRate: number;      // ₹ per bag
+  glueRate: number;            // ₹ per 1000 bags (pasting / gum)
+  laborRate: number;           // ₹ per 1000 bags
+  electricityRate: number;     // ₹ per unit (kWh)
+  powerLoad: number;           // kW total machine load
+  bagsPerHour: number;         // machine output
+}
+
+export const PAPER_TYPE_CONFIG: Record<PaperType, {
+  name: string;
+  description: string;
+  features: string[];
+  defaultGSM: number;
+}> = {
+  kraft: {
+    name: 'Kraft Paper',
+    description: 'Natural brown kraft for grocery & food bags',
+    features: ['High strength', 'Eco friendly', 'Economical'],
+    defaultGSM: 90,
+  },
+  'virgin-white': {
+    name: 'Virgin White Paper',
+    description: 'Bleached virgin paper for premium retail bags',
+    features: ['Bright white', 'Food grade', 'Premium look'],
+    defaultGSM: 100,
+  },
+  duplex: {
+    name: 'Duplex Board',
+    description: 'Coated board for rigid carry & shopping bags',
+    features: ['Stiff body', 'Coated surface', 'Great printing'],
+    defaultGSM: 250,
+  },
+  art: {
+    name: 'Art Paper',
+    description: 'Glossy coated paper for branded bags',
+    features: ['High gloss', 'Sharp print', 'Lamination ready'],
+    defaultGSM: 130,
+  },
+  recycled: {
+    name: 'Recycled Paper',
+    description: 'Recycled fibre paper for low-cost bags',
+    features: ['Lowest cost', 'Sustainable', 'Matte finish'],
+    defaultGSM: 80,
+  },
+};
+
+/* ==========================================================
+   TAX INVOICE / E-WAY BILL
+   ========================================================== */
+
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  hsn: string;
+  quantity: number;
+  unit: string;
+  rate: number;      // ₹ per unit
+  discount: number;  // ₹
+  taxRate: number;   // GST %
+}
+
+export interface InvoiceParty {
+  name: string;
+  gstin: string;
+  address: string;
+  state: string;
+  phone: string;
+  email: string;
+}
+
+export interface EwayBillDetails {
+  required: boolean;
+  ewayBillNo: string;
+  transporterName: string;
+  transporterId: string;
+  transportMode: 'road' | 'rail' | 'air' | 'ship';
+  vehicleNo: string;
+  vehicleType: 'regular' | 'over-dimensional';
+  distanceKm: number;
+  docType: 'tax-invoice' | 'bill-of-supply' | 'delivery-challan';
+  supplyType: 'outward' | 'inward';
+  subSupplyType: string;
+  dispatchFrom: string;
+  shipTo: string;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  dueDate: string;
+  placeOfSupply: string;
+  interState: boolean;
+  seller: InvoiceParty;
+  buyer: InvoiceParty;
+  items: InvoiceItem[];
+  eway: EwayBillDetails;
+  notes: string;
+  roundOff: boolean;
+  status: 'draft' | 'issued' | 'paid' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceTotals {
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalTax: number;
+  grandTotal: number;
+  roundOffValue: number;
+}
+
+export function calculateInvoiceTotals(invoice: Invoice): InvoiceTotals {
+  let taxableValue = 0;
+  let totalTax = 0;
+
+  invoice.items.forEach((item) => {
+    const line = Math.max(item.quantity * item.rate - item.discount, 0);
+    taxableValue += line;
+    totalTax += (line * item.taxRate) / 100;
+  });
+
+  const cgst = invoice.interState ? 0 : totalTax / 2;
+  const sgst = invoice.interState ? 0 : totalTax / 2;
+  const igst = invoice.interState ? totalTax : 0;
+
+  const raw = taxableValue + totalTax;
+  const grandTotal = invoice.roundOff ? Math.round(raw) : raw;
+
+  return {
+    taxableValue,
+    cgst,
+    sgst,
+    igst,
+    totalTax,
+    grandTotal,
+    roundOffValue: grandTotal - raw,
+  };
+}
